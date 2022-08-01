@@ -1,16 +1,29 @@
+require('dotenv').config()
 const express = require('express')
 const path = require('path')
 const app = express()
 const {bots, playerRecord} = require('./data')
 const {shuffleArray} = require('./utils')
 
+
 app.use(express.json())
 app.use(express.static('public'))
+// include and initialize the rollbar library with your access token
+var Rollbar = require('rollbar')
+var rollbar = new Rollbar({
+  accessToken: process.env.ROLLBAR_ACCESS_TOKEN,
+  captureUncaught: true,
+  captureUnhandledRejections: true,
+})
+
+// record a generic message and send it to Rollbar
+rollbar.log('Hello world!')
 
 app.get('/',(req,res) => {
     res.sendFile(path.join(__dirname,'./public/index.html'))
 })
 app.get('/js',(req,res) => {
+    rollbar.info('player has entered website')
     res.sendFile(path.join(__dirname,'./public/index.js'))
 })
 app.get('/styles',(req,res) => {
@@ -22,6 +35,7 @@ app.get('/api/robots', (req, res) => {
         res.status(200).send(botsArr)
     } catch (error) {
         console.log('ERROR GETTING BOTS', error)
+        rollbar.error('ERROR GETTING BOTS')
         res.sendStatus(400)
     }
 })
@@ -34,6 +48,7 @@ app.get('/api/robots/five', (req, res) => {
         res.status(200).send({choices, compDuo})
     } catch (error) {
         console.log('ERROR GETTING FIVE BOTS', error)
+        rollbar.error('ERROR GETTING FIVE BOTS')
         res.sendStatus(400)
     }
 })
@@ -59,12 +74,15 @@ app.post('/api/duel', (req, res) => {
         if (compHealthAfterAttack > playerHealthAfterAttack) {
             playerRecord.losses++
             res.status(200).send('You lost!')
+            rollbar.log('Player lost duel')
         } else {
             playerRecord.losses++
             res.status(200).send('You won!')
+            rollbar.log('Player won duel')
         }
     } catch (error) {
         console.log('ERROR DUELING', error)
+        rollbar.error('DUELING ERROR')
         res.sendStatus(400)
     }
 })
